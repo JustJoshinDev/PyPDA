@@ -7,26 +7,44 @@ from PySide6.QtWidgets import (
     QLabel, QFileDialog, QStackedWidget, QListWidget, QHBoxLayout, QTreeView, QFileSystemModel, QPlainTextEdit
 )
 from PySide6.QtCore import Qt, QDir, QEvent
-from PySide6.QtGui import QKeySequence
+from PySide6.QtGui import QKeySequence, QFont, QPalette, QColor
 
 APP_DATA_PATH = os.path.expanduser("~/.pipda")
 APPS_JSON = os.path.join(APP_DATA_PATH, "apps.json")
+
+# Apply late-90s PDA style globally
+def apply_retro_style(app):
+    font = QFont("Courier New", 10)
+    app.setFont(font)
+
+    palette = QPalette()
+    palette.setColor(QPalette.Window, QColor(192, 192, 192))
+    palette.setColor(QPalette.Button, QColor(160, 160, 160))
+    palette.setColor(QPalette.ButtonText, Qt.black)
+    palette.setColor(QPalette.Base, QColor(255, 255, 255))
+    palette.setColor(QPalette.Text, Qt.black)
+    palette.setColor(QPalette.WindowText, Qt.black)
+    app.setPalette(palette)
 
 class HomeScreen(QWidget):
     def __init__(self, parent):
         super().__init__()
         layout = QVBoxLayout()
 
-        header = QLabel("Welcome to PiPDA!")
+        header = QLabel("[ PiPDA OS Booted ]")
         header.setAlignment(Qt.AlignCenter)
         layout.addWidget(header)
 
-        layout.addSpacing(10)  # Add some space before buttons
+        layout.addSpacing(10)
 
-        btn_file = QPushButton("File Explorer")
+        btn_file = QPushButton("File Manager")
         btn_term = QPushButton("Terminal")
-        btn_apps = QPushButton("All Apps")
-        btn_add = QPushButton("Add App")
+        btn_apps = QPushButton("Installed Apps")
+        btn_add = QPushButton("Install New App")
+
+        for btn in [btn_file, btn_term, btn_apps, btn_add]:
+            btn.setFixedHeight(30)
+            btn.setStyleSheet("QPushButton { border: 2px outset gray; background-color: silver; }")
 
         btn_file.clicked.connect(lambda: parent.set_view("file"))
         btn_term.clicked.connect(lambda: parent.set_view("term"))
@@ -37,8 +55,7 @@ class HomeScreen(QWidget):
         layout.addWidget(btn_term)
         layout.addWidget(btn_apps)
         layout.addWidget(btn_add)
-
-        layout.addStretch()  # Add stretch to push the buttons to the top
+        layout.addStretch()
 
         self.setLayout(layout)
 
@@ -48,20 +65,20 @@ class FileExplorer(QWidget):
         layout = QVBoxLayout()
 
         self.model = QFileSystemModel()
-        self.model.setRootPath(QDir.rootPath())  # Set the root directory
+        self.model.setRootPath(QDir.rootPath())
 
         self.tree = QTreeView()
         self.tree.setModel(self.model)
         self.tree.setRootIndex(self.model.index(QDir.rootPath()))
-        self.tree.setColumnHidden(1, True)  # Hide size column
-        self.tree.setColumnHidden(2, True)  # Hide type column
+        self.tree.setColumnHidden(1, True)
+        self.tree.setColumnHidden(2, True)
 
-        btn_home = QPushButton("Exit to Home")
+        btn_home = QPushButton("Return to Main Menu")
         btn_home.clicked.connect(lambda: parent.set_view("home"))
 
-        layout.addWidget(QLabel("File Explorer"))
+        layout.addWidget(QLabel("[ File Explorer ]"))
         layout.addWidget(self.tree)
-        layout.addWidget(btn_home)  # Add exit button to this screen
+        layout.addWidget(btn_home)
 
         self.setLayout(layout)
 
@@ -70,76 +87,60 @@ class Terminal(QWidget):
         super().__init__()
         layout = QVBoxLayout()
 
-        # Create a text area for terminal output and input
         self.terminal_output = QPlainTextEdit()
-        self.terminal_output.setReadOnly(True)  # Make it read-only to simulate terminal
-        self.terminal_output.setPlaceholderText("Terminal Output Here...")
+        self.terminal_output.setReadOnly(True)
+        self.terminal_output.setPlaceholderText("-- Terminal Boot --")
 
         self.terminal_input = QPlainTextEdit()
-        self.terminal_input.setPlaceholderText("Enter command here...")
+        self.terminal_input.setPlaceholderText("Enter Command...")
         self.terminal_input.setFixedHeight(60)
 
-        # Add the input field's event filter
         self.terminal_input.installEventFilter(self)
 
-        btn_home = QPushButton("Exit to Home")
+        btn_home = QPushButton("Return to Main Menu")
         btn_home.clicked.connect(lambda: parent.set_view("home"))
 
-        layout.addWidget(QLabel("[ Terminal ]"))
+        layout.addWidget(QLabel("[ Terminal Interface ]"))
         layout.addWidget(self.terminal_output)
         layout.addWidget(self.terminal_input)
-        layout.addWidget(btn_home)  # Add exit button to this screen
+        layout.addWidget(btn_home)
 
         self.setLayout(layout)
 
-        # Display the initial directory
         self.show_current_directory()
 
     def eventFilter(self, source, event):
-        # Detect the Enter key press on the terminal input field
         if source == self.terminal_input and event.type() == QEvent.KeyPress:
             if event.key() == Qt.Key_Return or event.key() == Qt.Key_Enter:
                 self.execute_command()
-                return True  # Return True to indicate the event is handled
-
-        return super().eventFilter(source, event)  # Pass the event to the default handler
+                return True
+        return super().eventFilter(source, event)
 
     def show_current_directory(self):
-        """Display the current directory in the terminal output."""
         current_dir = os.getcwd()
-        self.terminal_output.appendPlainText(f"Current Directory: {current_dir}")
+        self.terminal_output.appendPlainText(f"DIR: {current_dir}")
 
     def execute_command(self):
         command = self.terminal_input.toPlainText().strip()
         if not command:
             return
 
-        # Display the command in the terminal output window
-        self.terminal_output.appendPlainText(f"$ {command}")
+        self.terminal_output.appendPlainText(f"> {command}")
 
-        # Execute the command in the system shell (depending on the OS)
-        if sys.platform.startswith('linux'):
+        if sys.platform.startswith('linux') or sys.platform.startswith('win'):
             process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=os.getcwd())
-        elif sys.platform.startswith('win'):
-            process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=os.getcwd())
-
         else:
-            self.terminal_output.appendPlainText("Unsupported platform for terminal commands.")
+            self.terminal_output.appendPlainText("! Unsupported platform.")
             return
 
-        # Collect the output and error streams
         stdout, stderr = process.communicate()
 
-        # Display the output
         if stdout:
             self.terminal_output.appendPlainText(stdout.decode('utf-8'))
         if stderr:
             self.terminal_output.appendPlainText(stderr.decode('utf-8'))
 
-        # Show the current directory after executing the command
         self.show_current_directory()
-
-        # Clear input after execution
         self.terminal_input.clear()
 
 class AppMenu(QWidget):
@@ -147,12 +148,12 @@ class AppMenu(QWidget):
         super().__init__()
         self.layout = QVBoxLayout()
         self.app_list = QListWidget()
-        btn_home = QPushButton("Exit to Home")
+        btn_home = QPushButton("Return to Main Menu")
         btn_home.clicked.connect(lambda: parent.set_view("home"))
 
-        self.layout.addWidget(QLabel("Installed Apps:"))
+        self.layout.addWidget(QLabel("[ Installed Applications ]"))
         self.layout.addWidget(self.app_list)
-        self.layout.addWidget(btn_home)  # Add exit button to this screen
+        self.layout.addWidget(btn_home)
         self.setLayout(self.layout)
         self.load_apps()
 
@@ -168,7 +169,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("JoshPDA Rev 1")
-        self.showFullScreen()  # Full screen mode
+        self.showFullScreen()
 
         self.stack = QStackedWidget()
         self.home = HomeScreen(self)
@@ -176,10 +177,10 @@ class MainWindow(QMainWindow):
         self.terminal = Terminal(self)
         self.app_menu = AppMenu(self)
 
-        self.stack.addWidget(self.home)      # Index 0
-        self.stack.addWidget(self.file_explorer)  # 1
-        self.stack.addWidget(self.terminal)  # 2
-        self.stack.addWidget(self.app_menu)  # 3
+        self.stack.addWidget(self.home)
+        self.stack.addWidget(self.file_explorer)
+        self.stack.addWidget(self.terminal)
+        self.stack.addWidget(self.app_menu)
 
         self.setCentralWidget(self.stack)
 
@@ -204,6 +205,7 @@ class MainWindow(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    apply_retro_style(app)
     window = MainWindow()
     window.show()
     sys.exit(app.exec())
