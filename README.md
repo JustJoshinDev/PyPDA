@@ -1,8 +1,8 @@
 # 🖴 PiPDA - A Retro Python PDA Interface
 
 **PiPDA** is a stylized, personal digital assistant (PDA) interface built with Python and PySide6, themed to look and feel like a classic 90s PDA. It features built-in tools, app installation, and an extension system to easily build and add new functionality.
-- text in red
-<span style="color:red;">PiPDA is currently in beta, meaning that no binaries will be released and the code is very likely to be bugged and not working. Use at your own risk.</span>
+
+PiPDA is currently in beta, meaning that no binaries will be released and the code is very likely to be bugged and not working. Use at your own risk.
 ---
 
 ## ✨ Features
